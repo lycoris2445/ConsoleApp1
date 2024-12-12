@@ -18,7 +18,7 @@ namespace FinancialManager
         private static List<Transaction> Transactions = new List<Transaction>();
         static GamificationManager gamificationManager = new GamificationManager();
         private static ChallengeManager challengeManager = new ChallengeManager();
-        static List<Spending> spendings = new List<Spending>();
+        private static string transactionFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1\Spending.csv";
         static void Main(string[] args)
         {
             while (true)
@@ -98,14 +98,19 @@ namespace FinancialManager
             {
                 case "1":
                     AddSpendingRecord(out amount, out category, out description, out date);
-                    string directoryPath = @"C:\Users\quynh trang\source\repos\ConsoleApp1";
-                    string fileName = "Spending.csv";
-                    string filePath = Path.Combine(directoryPath, fileName);
-                    WriteToCsv(filePath, amount, category, description, date);
+                    string spendingFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1";
+                    string SpendingFileName = "Spending.csv";
+                    string SpendingFilePath = Path.Combine(spendingFilePath, SpendingFileName);
+                    WriteSpendingToCsv(spendingFilePath, amount, category, description, date);
                     Console.ReadKey();
                     break;
                 case "2":
-                    AddIncomeRecord();
+                    AddIncomeRecord(out amount, out category, out description, out date);
+                    string incomeFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1";
+                    string IncomeFileName = "Income.csv";
+                    string IncomeFilePath = Path.Combine(incomeFilePath, IncomeFileName);
+                    WriteIncomeToCsv(incomeFilePath, amount, category, description, date);
+                    Console.ReadKey();
                     break;
                 case "3":
                     AddLoanRecord();
@@ -119,6 +124,13 @@ namespace FinancialManager
                     Console.ResetColor();
                     break;
             }
+        }
+
+        static void StoreTransaction(decimal amount, string category, string description, DateTime date, string type)
+        {
+            // Add a new transaction to the static list
+            Transactions.Add(new Transaction(amount, category, description, date, type));
+            SaveTransactionsToFile();
         }
 
         static void AddSpendingRecord(out decimal amount, out string category, out string description, out DateTime date)
@@ -136,19 +148,21 @@ namespace FinancialManager
             description = Console.ReadLine();
 
             date = GetDateInput("Enter date (leave blank for today): ");
-            // Call WriteToCsv and pass the required parameters
+            
+            // Store the spending record
+            StoreTransaction(amount, category, description, date, "Spending");
 
             Console.WriteLine($"Spending Record Added: {FormatCurrency(amount)} VND, On {category}, For {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
         }
-        static void WriteToCsv(string filePath, decimal amount, string category, string description, DateTime date)
+        static void WriteSpendingToCsv(string SpendingFilePath, decimal amount, string category, string description, DateTime date)
         {
 
             try
             {
-                if (!File.Exists(filePath))
+                if (!File.Exists(SpendingFilePath))
                 {
-                    using (File.Create(filePath)) { }
+                    using (File.Create(SpendingFilePath)) { }
                 }
 
 
@@ -170,7 +184,7 @@ namespace FinancialManager
                     HasHeaderRecord = false
                 };
 
-                using (StreamWriter streamWriter = new StreamWriter(filePath, true))
+                using (StreamWriter streamWriter = new StreamWriter(SpendingFilePath, true))
                 using (CsvWriter csvWriter = new CsvWriter(streamWriter, configSpendings))
                 {
                     csvWriter.WriteRecords(spendings);
@@ -191,24 +205,78 @@ namespace FinancialManager
             public string Description { get; set; }
             public DateTime Date { get; set; }
         }
-        static void AddIncomeRecord()
+
+        static void AddIncomeRecord(out decimal amount, out string category, out string description, out DateTime date)
         {
             Console.Clear();
             Console.WriteLine("=== Add Income Record ===");
 
             Console.Write("Enter amount (e.g., 30k, 3m, 3B, 30.000): ");
-            decimal amount = ReadDecimalInput();
+            amount = ReadDecimalInput();
 
             Console.Write("Enter category (e.g., Main Job, Part-Time Job, Savings): ");
-            string category = Console.ReadLine();
+            category = Console.ReadLine();
 
             Console.Write("Enter description: ");
-            string description = Console.ReadLine();
+            description = Console.ReadLine();
 
-            DateTime date = GetDateInput("Enter date (leave blank for today): ");
+            date = GetDateInput("Enter date (leave blank for today): ");
+
+            // Store the income record
+            StoreTransaction(amount, category, description, date, "Income");
 
             Console.WriteLine($"Income Record Added: {FormatCurrency(amount)} VND, From {category}, For {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
+        }
+        static void WriteIncomeToCsv(string IncomeFilePath, decimal amount, string category, string description, DateTime date)
+        {
+
+            try
+            {
+                if (!File.Exists(IncomeFilePath))
+                {
+                    using (File.Create(IncomeFilePath)) { }
+                }
+
+
+                List<Income> incomes = new List<Income>
+                {
+                    // Thêm thông tin vào danh sách chi tiêu
+                    new Income
+                    {
+                        Amount = amount,
+                        Category = category,
+                        Description = description,
+                        Date = date
+                    }
+                };
+
+
+                var configIncomes = new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    HasHeaderRecord = false
+                };
+
+                using (StreamWriter streamWriter = new StreamWriter(IncomeFilePath, true))
+                using (CsvWriter csvWriter = new CsvWriter(streamWriter, configIncomes))
+                {
+                    csvWriter.WriteRecords(incomes);
+                }
+
+                Console.WriteLine("Data written to CSV successfully.");
+            }
+
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public class Income
+        {
+            public decimal Amount { get; set; }
+            public string Category { get; set; }
+            public string Description { get; set; }
+            public DateTime Date { get; set; }
         }
         static void AddLoanRecord()
         {
@@ -225,6 +293,9 @@ namespace FinancialManager
             string description = Console.ReadLine();
 
             DateTime date = GetDateInput("Enter date (leave blank for today): ");
+
+            //Store the loan record
+            Program.StoreTransaction(amount, Borrower, description, date, "Loan");
 
             Console.WriteLine($"Loan Record Added: {FormatCurrency(amount)} VND, To {Borrower}, For {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
@@ -246,10 +317,12 @@ namespace FinancialManager
 
             DateTime date = GetDateInput("Enter date (leave blank for today): ");
 
+            // Store the debit record
+            StoreTransaction(amount, lender, description, date, "Debit");
+
             Console.WriteLine($"Debit Record Added: {FormatCurrency(amount)} VND, From {lender}, To {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
         }
-
 
         static decimal ReadDecimalInput()
         {
@@ -535,108 +608,65 @@ namespace FinancialManager
 
         static void LoadTransactionsFromFile()
         {
-            Console.Clear();
-            string transactionFilePath = @"C:\Users\quynh trang\Downloads\sample_data1.csv";
-
             if (!File.Exists(transactionFilePath))
             {
                 Console.WriteLine("Transaction file not found.");
                 return;
             }
-            //var transactions = ReadCsvFile(transactionFilePath);
-            try
+
+            string[] rows = File.ReadAllLines(transactionFilePath);
+            Transactions.Clear();
+
+            for (int i = 1; i < rows.Length; i++) // Assuming first row is header
             {
-                using (StreamReader reader = new StreamReader(transactionFilePath))
+                string[] columns = rows[i].Split(',');
+
+                if (columns.Length < 5)
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
-                    {
-                        Console.WriteLine(line);
-                    }
+                    Console.WriteLine($"Invalid data on row {i + 1}. Skipping...");
+                    continue;
                 }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(ex.Message);
-            }
-            Console.ReadKey();
-
-            // Read and parse CSV file
-            Console.WriteLine("Data successfully loaded.");
-
-            Console.WriteLine("Choose a sorting option:");
-            Console.WriteLine("[1] Sort by Date (Newest first)");
-            Console.WriteLine("[2] Sort by Date (Oldest first)");
-            Console.WriteLine("[3] Sort by Amount (High to Low)");
-            Console.WriteLine("[4] Sort by Amount (Low to High)");
-            string choice = Console.ReadLine();
-
-            List<Transaction> sortedTransactions = choice switch
-            {
-                "1" => transactions.OrderByDescending(t => t.Date).ToList(),
-                "2" => transactions.OrderBy(t => t.Date).ToList(),
-                "3" => transactions.OrderByDescending(t => t.Amount).ToList(),
-                "4" => transactions.OrderBy(t => t.Amount).ToList(),
-                _ => transactions
-            };
-
-            Console.WriteLine("\nSorted Transactions:");
-            foreach (var transaction in sortedTransactions)
-            {
-                Console.WriteLine(transaction);
-            }
-        }
-
-        static List<Transaction> ReadCsvFile(string filePath)
-        {
-            var transactions = new List<Transaction>();
-            var lines = File.ReadAllLines(filePath);
-
-            for (int i = 1; i < lines.Length; i++) // Skip header row
-            {
-                var columns = lines[i].Split(',');
-                if (columns.Length < 5) continue;
 
                 try
                 {
-                    string flow = columns[1].Trim();
-                    string method = columns[2].Trim();
-                    DateTime date = DateTime.ParseExact(columns[3].Trim(), "M/d/yyyy H:mm", CultureInfo.InvariantCulture);
-                    string category = columns[4].Trim();
-                    decimal amount = decimal.Parse(columns[5].Replace("?", "").Trim(), NumberStyles.AllowThousands);
+                    string type = columns[0].Trim();
+                    decimal amount = decimal.Parse(columns[1].Trim());
+                    string category = columns[2].Trim();
+                    string description = columns[3].Trim();
+                    DateTime date = DateTime.Parse(columns[4].Trim());
 
-                    transactions.Add(new Transaction(flow, method, date, category, amount));
+                    Transactions.Add(new Transaction(amount, category, description, date, type));
                 }
-                catch
+                catch (Exception ex)
                 {
-                    Console.WriteLine($"Error parsing row: {lines[i]}");
+                    Console.WriteLine($"Error parsing row {i + 1}: {ex.Message}. Skipping...");
                 }
             }
-
-            return transactions;
         }
 
-        public class Transaction
+        static void SaveTransactionsToFile()
         {
-            public string Flow { get; set; }
-            public string Method { get; set; }
-            public DateTime Date { get; set; }
-            public string Category { get; set; }
-            public decimal Amount { get; set; }
-
-            public Transaction(string flow, string method, DateTime date, string category, decimal amount)
+            if (Transactions == null || Transactions.Count == 0)
             {
-                Flow = flow;
-                Method = method;
-                Date = date;
-                Category = category;
-                Amount = amount;
+                Console.WriteLine("No transactions to save.");
+                return;
             }
 
-            public override string ToString()
+            List<string> rows = new List<string>();
+
+            // Add header row
+            rows.Add("Type,Amount,Category,Description,Date");
+
+            // Add each transaction as a row
+            foreach (var transaction in Transactions)
             {
-                return $"{Date.ToShortDateString()} | {Flow} | {Category} | {Amount:C} | {Method}";
+                rows.Add($"{transaction.Type},{transaction.Amount},{transaction.Category},{transaction.Description},{transaction.Date:yyyy-MM-dd}");
             }
+
+            // Write to file, overwriting any existing content
+            File.WriteAllLines(transactionFilePath, rows);
+
+            Console.WriteLine("Transactions saved to file successfully.");
         }
 
         static void ShowTransaction()
@@ -727,8 +757,8 @@ namespace FinancialManager
             Console.WriteLine("\nPress any key to return...");
             Console.ReadKey();
         }
-
     }
+
     public class Transaction
     {
         public string Type { get; set; } // "Income" or "Expense"
