@@ -18,7 +18,7 @@ namespace FinancialManager
         private static List<Transaction> Transactions = new List<Transaction>();
         static GamificationManager gamificationManager = new GamificationManager();
         private static ChallengeManager challengeManager = new ChallengeManager();
-        private static string transactionFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1\Spending.csv";
+        private static string transactionFilePath = @"F:\ConsoleApp1";
         static void Main(string[] args)
         {
             while (true)
@@ -40,7 +40,11 @@ namespace FinancialManager
                         Home();
                         break;
                     case "2":
-                        LoadTransactionsFromFile();
+                        Transactions.Clear();
+                        LoadTransactionsFromFile("Spending.csv");
+                        LoadTransactionsFromFile("Income.csv");
+                        LoadTransactionsFromFile("Loan.csv");
+                        LoadTransactionsFromFile("Debit.csv");
                         ShowTransaction();
                         break;
                     case "3":
@@ -93,12 +97,14 @@ namespace FinancialManager
             decimal amount = 0;
             string category = string.Empty;
             string description = string.Empty;
+            string borrower = string.Empty;
+            string lender = string.Empty;
             DateTime date = DateTime.Now;
             switch (choice)
             {
                 case "1":
                     AddSpendingRecord(out amount, out category, out description, out date);
-                    string spendingFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1";
+                    string spendingFilePath = @"F:\ConsoleApp1\Spending.csv";
                     string SpendingFileName = "Spending.csv";
                     string SpendingFilePath = Path.Combine(spendingFilePath, SpendingFileName);
                     WriteSpendingToCsv(spendingFilePath, amount, category, description, date);
@@ -106,17 +112,27 @@ namespace FinancialManager
                     break;
                 case "2":
                     AddIncomeRecord(out amount, out category, out description, out date);
-                    string incomeFilePath = @"C:\Users\quynh trang\source\repos\ConsoleApp1";
+                    string incomeFilePath = @"F:\ConsoleApp1\Income.csv";
                     string IncomeFileName = "Income.csv";
                     string IncomeFilePath = Path.Combine(incomeFilePath, IncomeFileName);
                     WriteIncomeToCsv(incomeFilePath, amount, category, description, date);
                     Console.ReadKey();
                     break;
                 case "3":
-                    AddLoanRecord();
+                    AddLoanRecord(out amount, out borrower, out description, out date);
+                    string loanFilePath = @"F:\ConsoleApp1\Loan.csv";
+                    string LoanFileName = "Loan.csv";
+                    string LoanFilePath = Path.Combine(loanFilePath, LoanFileName);
+                    WriteLoanToCsv(loanFilePath, amount, borrower, description, date);
+                    Console.ReadKey();
                     break;
                 case "4":
-                    AddDebitRecord();
+                    AddDebitRecord(out amount, out lender, out description, out date);
+                    string debitFilePath = @"F:\ConsoleApp1\Debit.csv";
+                    string DebitFileName = "Debit.csv";
+                    string DebitFilePath = Path.Combine(debitFilePath, DebitFileName);
+                    WriteDebitToCsv(debitFilePath, amount, lender, description, date);
+                    Console.ReadKey();
                     break;
                 default:
                     Console.ForegroundColor = ConsoleColor.Red;
@@ -278,50 +294,149 @@ namespace FinancialManager
             public string Description { get; set; }
             public DateTime Date { get; set; }
         }
-        static void AddLoanRecord()
+        static void AddLoanRecord(out decimal amount, out string borrower, out string description, out DateTime date)
         {
             Console.Clear();
             Console.WriteLine("=== Add Loan Record ===");
 
             Console.Write("Enter amount (e.g., 30k, 3m, 3B, 30.000): ");
-            decimal amount = ReadDecimalInput();
+            amount = ReadDecimalInput();
 
             Console.Write("Enter who you lend to: ");
-            string Borrower = Console.ReadLine();
+            borrower = Console.ReadLine();
 
             Console.Write("Enter description (e.g: what they borrow for): ");
-            string description = Console.ReadLine();
+            description = Console.ReadLine();
 
-            DateTime date = GetDateInput("Enter date (leave blank for today): ");
+            date = GetDateInput("Enter date (leave blank for today): ");
 
             //Store the loan record
-            Program.StoreTransaction(amount, Borrower, description, date, "Loan");
+            Program.StoreTransaction(amount, borrower, description, date, "Loan");
 
-            Console.WriteLine($"Loan Record Added: {FormatCurrency(amount)} VND, To {Borrower}, For {description}, On {date.ToShortDateString()}");
+            Console.WriteLine($"Loan Record Added: {FormatCurrency(amount)} VND, To {borrower}, For {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
         }
+        static void WriteLoanToCsv(string LoanFilePath, decimal amount, string borrower, string description, DateTime date)
+        {
 
-        static void AddDebitRecord()
+            try
+            {
+                if (!File.Exists(LoanFilePath))
+                {
+                    using (File.Create(LoanFilePath)) { }
+                }
+
+
+                List<Loan> loans = new List<Loan>
+                {
+                    // Thêm thông tin vào danh sách chi tiêu
+                    new Loan
+                    {
+                        Amount = amount,
+                        borrower = borrower,
+                        Description = description,
+                        Date = date
+                    }
+                };
+
+
+                var configIncomes = new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    HasHeaderRecord = false
+                };
+
+                using (StreamWriter streamWriter = new StreamWriter(LoanFilePath, true))
+                using (CsvWriter csvWriter = new CsvWriter(streamWriter, configIncomes))
+                {
+                    csvWriter.WriteRecords(loans);
+                }
+
+                Console.WriteLine("Data written to CSV successfully.");
+            }
+
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public class Loan
+        {
+            public decimal Amount { get; set; }
+            public string borrower { get; set; }
+            public string Description { get; set; }
+            public DateTime Date { get; set; }
+        }
+        static void AddDebitRecord(out decimal amount, out string lender, out string description, out DateTime date)
         {
             Console.Clear();
             Console.WriteLine("=== Add Debit Record ===");
 
             Console.Write("Enter amount (e.g., 30k, 3m, 3B, 30.000): ");
-            decimal amount = ReadDecimalInput();
+            amount = ReadDecimalInput();
 
             Console.Write("Enter who you take loan from (e.g: bank's name, a person's name): ");
-            string lender = Console.ReadLine();
+            lender = Console.ReadLine();
 
             Console.Write("Enter description (e.g: What you used it for?): ");
-            string description = Console.ReadLine();
+            description = Console.ReadLine();
 
-            DateTime date = GetDateInput("Enter date (leave blank for today): ");
+            date = GetDateInput("Enter date (leave blank for today): ");
 
             // Store the debit record
             StoreTransaction(amount, lender, description, date, "Debit");
 
             Console.WriteLine($"Debit Record Added: {FormatCurrency(amount)} VND, From {lender}, To {description}, On {date.ToShortDateString()}");
             // TODO: Store this record in a collection or file
+        }
+        static void WriteDebitToCsv(string DebitFilePath, decimal amount, string lender, string description, DateTime date)
+        {
+
+            try
+            {
+                if (!File.Exists(DebitFilePath))
+                {
+                    using (File.Create(DebitFilePath)) { }
+                }
+
+
+                List<Debit> debits = new List<Debit>
+                {
+                    // Thêm thông tin vào danh sách chi tiêu
+                    new Debit
+                    {
+                        Amount = amount,
+                        lender = lender,
+                        Description = description,
+                        Date = date
+                    }
+                };
+
+
+                var configIncomes = new CsvConfiguration(CultureInfo.InvariantCulture)
+                {
+                    HasHeaderRecord = false
+                };
+
+                using (StreamWriter streamWriter = new StreamWriter(DebitFilePath, true))
+                using (CsvWriter csvWriter = new CsvWriter(streamWriter, configIncomes))
+                {
+                    csvWriter.WriteRecords(debits);
+                }
+
+                Console.WriteLine("Data written to CSV successfully.");
+            }
+
+            catch (Exception ex)
+            {
+                throw;
+            }
+        }
+        public class Debit
+        {
+            public decimal Amount { get; set; }
+            public string lender { get; set; }
+            public string Description { get; set; }
+            public DateTime Date { get; set; }
         }
 
         static decimal ReadDecimalInput()
@@ -606,16 +721,17 @@ namespace FinancialManager
             }
         }
 
-        static void LoadTransactionsFromFile()
+        static void LoadTransactionsFromFile(string type)
         {
-            if (!File.Exists(transactionFilePath))
+            string filepath = transactionFilePath + type;
+            if (!File.Exists(filepath))
             {
                 Console.WriteLine("Transaction file not found.");
                 return;
             }
 
-            string[] rows = File.ReadAllLines(transactionFilePath);
-            Transactions.Clear();
+            string[] rows = File.ReadAllLines(filepath);
+
 
             for (int i = 1; i < rows.Length; i++) // Assuming first row is header
             {
@@ -629,13 +745,13 @@ namespace FinancialManager
 
                 try
                 {
-                    string type = columns[0].Trim();
+                    string types = columns[0].Trim();
                     decimal amount = decimal.Parse(columns[1].Trim());
                     string category = columns[2].Trim();
                     string description = columns[3].Trim();
                     DateTime date = DateTime.Parse(columns[4].Trim());
 
-                    Transactions.Add(new Transaction(amount, category, description, date, type));
+                    Transactions.Add(new Transaction(amount, category, description, date, types));
                 }
                 catch (Exception ex)
                 {
@@ -652,21 +768,58 @@ namespace FinancialManager
                 return;
             }
 
+            List<Transaction> spendingTrans = new List<Transaction>();
+            List<Transaction> incomeTrans = new List<Transaction>();
+            List<Transaction> loanTrans = new List<Transaction>();
+            List<Transaction> debitTrans = new List<Transaction>();
+            // Add each transaction as a row
+            foreach (var transaction in Transactions)
+            {
+                switch (transaction.Type)
+                {
+                    case "Spending":
+                        spendingTrans.Add(transaction);
+                        break;
+                    case "Income":
+                        incomeTrans.Add(transaction);
+                        break;
+                    case "Loan":
+                        loanTrans.Add(transaction);
+                        break;
+                    case "Debit":
+                        debitTrans.Add(transaction);
+                        break;
+
+                }
+            }
+            SaveFileByType("Spending", spendingTrans);
+            SaveFileByType("Income", incomeTrans);
+            SaveFileByType("Loan", loanTrans);
+            SaveFileByType("Debit", debitTrans);
+        }
+
+        static void SaveFileByType(string type, List<Transaction> transactions)
+        {
+            string fileName = type + ".csv";
+
+
+            string filePath = transactionFilePath + fileName;
             List<string> rows = new List<string>();
 
             // Add header row
             rows.Add("Type,Amount,Category,Description,Date");
 
             // Add each transaction as a row
-            foreach (var transaction in Transactions)
+            foreach (var transaction in transactions)
             {
                 rows.Add($"{transaction.Type},{transaction.Amount},{transaction.Category},{transaction.Description},{transaction.Date:yyyy-MM-dd}");
             }
 
             // Write to file, overwriting any existing content
-            File.WriteAllLines(transactionFilePath, rows);
+            File.WriteAllLines(filePath, rows);
 
-            Console.WriteLine("Transactions saved to file successfully.");
+            Console.WriteLine(type + " transactions saved to file successfully.");
+
         }
 
         static void ShowTransaction()
